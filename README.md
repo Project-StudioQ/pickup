@@ -48,7 +48,7 @@ View 3D / Edit Mode もしくは Pose Mode
 
 ## 動画
 
-TODO
+[![YouTubeで見る](https://img.youtube.com/vi/OuoUGhjTyOE/0.jpg)](https://www.youtube.com/watch?v=OuoUGhjTyOE)
 
 ## インストール
 

@@ -1,4 +1,4 @@
-# Tools:Q Pikcup
+# Tools:Q Pickup
 
 [日本語](README.md)
 
@@ -47,7 +47,7 @@ This addon has two selection mode. however "Default" mode cannot use without Win
 
 ## Video
 
-TODO
+[![Watch on YouTube](https://img.youtube.com/vi/OuoUGhjTyOE/0.jpg)](https://www.youtube.com/watch?v=OuoUGhjTyOE)
 
 ## How to install
 
