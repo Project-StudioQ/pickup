@@ -1,23 +1,3 @@
-"""
-    This file is part of Pickup.
-
-    Copyright (C) 2023 Project Studio Q inc.
-
-    Animation Offset Shift is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License
-    as published by the Free Software Foundation; either version 2
-    of the License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-"""
-
 import bpy
 import ctypes
 from bpy_extras.io_utils import ImportHelper
@@ -132,19 +112,19 @@ def _get_QANIM_SAVE_object_pickup_single_object( self ):
     return False
 
 class QANIM_SAVE_object_pickup_single_object(bpy.types.PropertyGroup):
-    object_name: bpy.props.StringProperty( default= "None" )
-    select: bpy.props.BoolProperty( default= False, set= _set_QANIM_SAVE_object_pickup_single_object, get= _get_QANIM_SAVE_object_pickup_single_object, options= {'SKIP_SAVE'} )
+    object_name: bpy.props.StringProperty( default= "None", options={'HIDDEN'} )
+    select: bpy.props.BoolProperty( default= False, set= _set_QANIM_SAVE_object_pickup_single_object, get= _get_QANIM_SAVE_object_pickup_single_object, options= {'SKIP_SAVE', 'HIDDEN'} )
 
 class QANIM_SAVE_object_pickup_group(bpy.types.PropertyGroup):
-    show: bpy.props.BoolProperty( default= False )
-    name: bpy.props.StringProperty( default= "New Group" )
-    objects: bpy.props.CollectionProperty( type= QANIM_SAVE_object_pickup_single_object )
+    show: bpy.props.BoolProperty( default= False, options={'HIDDEN'} )
+    name: bpy.props.StringProperty( default= "New Group", options={'HIDDEN'} )
+    objects: bpy.props.CollectionProperty( type= QANIM_SAVE_object_pickup_single_object, options={'HIDDEN'} )
 
 # -----------------------------------------------------------------------------
 
 class QANIM_OT_object_pickup_register(bpy.types.Operator):
     bl_idname = "qanim.object_pickup_register"
-    bl_label = "New"
+    bl_label = "新規登録"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Register Object Pickup"
 
@@ -164,7 +144,7 @@ class QANIM_OT_object_pickup_register(bpy.types.Operator):
 
 class QANIM_OT_object_pickup_mirror(bpy.types.Operator):
     bl_idname = "qanim.object_pickup_mirror"
-    bl_label = "LR Mirror"
+    bl_label = "LRミラー"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Mirror Object Group"
 
@@ -189,7 +169,7 @@ class QANIM_OT_object_pickup_mirror(bpy.types.Operator):
 
 class QANIM_OT_object_pickup_delete(bpy.types.Operator):
     bl_idname = "qanim.object_pickup_delete"
-    bl_label = "Delete"
+    bl_label = "削除"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Delete Object Group"
 
@@ -201,9 +181,9 @@ class QANIM_OT_object_pickup_delete(bpy.types.Operator):
 
 class QANIM_OT_object_pickup_single_add(bpy.types.Operator):
     bl_idname = "qanim.object_pickup_single_add"
-    bl_label = "Append"
+    bl_label = "追加"
     bl_options = {'REGISTER', 'UNDO'}
-    bl_description = "Append Object to Group"
+    bl_description = "Register Object Pickup"
 
     group_index: bpy.props.IntProperty( )
 
@@ -230,9 +210,9 @@ class QANIM_OT_object_pickup_single_add(bpy.types.Operator):
 
 class QANIM_OT_object_pickup_single_delete(bpy.types.Operator):
     bl_idname = "qanim.object_pickup_single_delete"
-    bl_label = "Remove"
+    bl_label = "削除"
     bl_options = {'REGISTER', 'UNDO'}
-    bl_description = "Remove Single Object From Group"
+    bl_description = "Delete Single Object From Group"
 
     group_index: bpy.props.IntProperty( )
     selected_item_index: bpy.props.IntProperty( )
@@ -243,7 +223,7 @@ class QANIM_OT_object_pickup_single_delete(bpy.types.Operator):
 
 class QANIM_OT_object_pickup_save(bpy.types.Operator):
     bl_idname = "qanim.object_pickup_save"
-    bl_label = "Save"
+    bl_label = "書出"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Save Object Group to JSON"
 
@@ -266,7 +246,7 @@ class QANIM_OT_object_pickup_save(bpy.types.Operator):
 
 class QANIM_OT_object_pickup_load(bpy.types.Operator):
     bl_idname = "qanim.object_pickup_load"
-    bl_label = "Load"
+    bl_label = "読込"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Load Object Group from JSON"
 
@@ -311,7 +291,7 @@ class QANIM_OT_object_pickup_load(bpy.types.Operator):
 
 class QANIM_OT_object_pickup_load_from_blend(bpy.types.Operator):
     bl_idname = "qanim.object_pickup_load_from_blend"
-    bl_label = "Load from Blend file"
+    bl_label = "読込"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Load Object Group from Blend file"
 
@@ -519,7 +499,7 @@ class QANIM_PT_object_pickup(bpy.types.Panel):
 
         if context.scene.q_bp_object_group_import_export == "IMPORT":
             col = row.column( )
-            col.prop(context.scene, "q_bp_object_group_import_json_path", text="Import from")
+            col.prop(context.scene, "q_bp_object_group_import_json_path", text="インポート元")
             col = row.column( )
             col.alignment = "RIGHT"
             col.operator(QANIM_OT_object_pickup_select_path_import_json.bl_idname, text="", icon="FILE_FOLDER")
@@ -528,7 +508,7 @@ class QANIM_PT_object_pickup(bpy.types.Panel):
             col.operator( QANIM_OT_object_pickup_load.bl_idname ).json_path = context.scene.q_bp_object_group_import_json_path
         elif context.scene.q_bp_object_group_import_export == "EXPORT":
             col = row.column( )
-            col.prop(context.scene, "q_bp_object_group_export_json_path", text="Export to")
+            col.prop(context.scene, "q_bp_object_group_export_json_path", text="エクスポート先")
             col = row.column( )
             col.alignment = "RIGHT"
             col.operator(QANIM_OT_object_pickup_select_path_export_json.bl_idname, text="", icon="FILE_FOLDER")
@@ -537,7 +517,7 @@ class QANIM_PT_object_pickup(bpy.types.Panel):
             col.operator( QANIM_OT_object_pickup_save.bl_idname ).json_path = context.scene.q_bp_object_group_export_json_path
         elif context.scene.q_bp_object_group_import_export == "BLEND":
             col = row.column( )
-            col.prop(context.scene, "q_bp_object_group_input_blend_path", text="Import from Blend file")
+            col.prop(context.scene, "q_bp_object_group_input_blend_path", text="Blendから読み込み")
             col = row.column( )
             col.alignment = "RIGHT"
             col.operator(QANIM_OT_object_pickup_select_path_blend.bl_idname, text="", icon="FILE_FOLDER")
@@ -616,12 +596,12 @@ def _initialize( ):
         )
     )
     bpy.types.Scene.q_bp_object_group_mode = bpy.props.EnumProperty(
-        name= "Check Mode"
+        name= "モード"
     ,   default= 'DEFAULT' if windows_mode else 'BLENDER_CHECK'
     ,   options={'HIDDEN'}
     ,   items=(
-            ('DEFAULT', 'Default', '通常の選択と同じ挙動'),
-            ('BLENDER_CHECK', 'Blender Check', 'Blenderのチェックマークと同じ挙動'),
+            ('DEFAULT', 'デフォルト', '通常の選択と同じ挙動'),
+            ('BLENDER_CHECK', 'Blenderチェック式', 'Blenderのチェックマークと同じ挙動'),
         )
     )
 

@@ -1,23 +1,3 @@
-"""
-    This file is part of Pickup.
-
-    Copyright (C) 2023 Project Studio Q inc.
-
-    Animation Offset Shift is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License
-    as published by the Free Software Foundation; either version 2
-    of the License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-"""
-
 import bpy
 import ctypes
 from bpy_extras.io_utils import ImportHelper, ExportHelper
@@ -38,6 +18,7 @@ def _set_QANIM_SAVE_bone_pickup_single_bone( self, value ):
     context = bpy.context
 
     group = _get_group_by_single_bone( self )
+    group.high_light = False
     if group is None or group.object is None:
         o = context.active_object
     else:
@@ -129,22 +110,31 @@ def _filter_armature_object( self, obj ):
     else:
         return True
 
+def _set_QANIM_SAVE_bone_pickup_ui_name( self, value ):
+    self.name = value
+    self.high_light = True
+
+def _get_QANIM_SAVE_bone_pickup_ui_name( self ):
+    return self.name
+
 class QANIM_SAVE_bone_pickup_single_bone(bpy.types.PropertyGroup):
-    bone_name: bpy.props.StringProperty( default= "None" )
+    bone_name: bpy.props.StringProperty( default= "None", options={"HIDDEN"} )
     # XXX: リンクしたオブジェクトで object.data.bones[].select がUI上で編集できなくなるので、setter/getterを利用してPythonから書き込む
-    select: bpy.props.BoolProperty( default= False, set= _set_QANIM_SAVE_bone_pickup_single_bone, get= _get_QANIM_SAVE_bone_pickup_single_bone, options= {'SKIP_SAVE'} )
+    select: bpy.props.BoolProperty( default= False, set= _set_QANIM_SAVE_bone_pickup_single_bone, get= _get_QANIM_SAVE_bone_pickup_single_bone, options= {'SKIP_SAVE', 'HIDDEN'} )
 
 class QANIM_SAVE_bone_pickup_group(bpy.types.PropertyGroup):
-    show: bpy.props.BoolProperty( default= False )
-    object: bpy.props.PointerProperty( type=bpy.types.Object, poll= _filter_armature_object )
-    name: bpy.props.StringProperty( default= "New Group" )
-    bones: bpy.props.CollectionProperty( type= QANIM_SAVE_bone_pickup_single_bone )
+    show: bpy.props.BoolProperty( default= False, options={"HIDDEN"} )
+    high_light: bpy.props.BoolProperty( default= False, options={"HIDDEN"} )
+    object: bpy.props.PointerProperty( type=bpy.types.Object, poll= _filter_armature_object, options={"HIDDEN"} )
+    name: bpy.props.StringProperty( default= "New Group", options={"HIDDEN"} )
+    ui_name: bpy.props.StringProperty( default= "New Group", set= _set_QANIM_SAVE_bone_pickup_ui_name, get= _get_QANIM_SAVE_bone_pickup_ui_name, options={"HIDDEN"} )
+    bones: bpy.props.CollectionProperty( type= QANIM_SAVE_bone_pickup_single_bone, options={"HIDDEN"} )
 
 # -----------------------------------------------------------------------------
 
 class QANIM_OT_bone_pickup_register(bpy.types.Operator):
     bl_idname = "qanim.bone_pickup_register"
-    bl_label = "New"
+    bl_label = "新規登録"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Register Bone Pickup"
 
@@ -163,6 +153,7 @@ class QANIM_OT_bone_pickup_register(bpy.types.Operator):
         new_group = context.scene.q_bp_bone_groups.add( )
         new_group.object = context.active_object
         new_group.name = "New Group"
+        new_group.high_light = True
 
         bones = context.selected_pose_bones_from_active_object if context.mode == "POSE" else context.selected_editable_bones
 
@@ -174,7 +165,7 @@ class QANIM_OT_bone_pickup_register(bpy.types.Operator):
 
 class QANIM_OT_bone_pickup_copy(bpy.types.Operator):
     bl_idname = "qanim.bone_pickup_copy"
-    bl_label = "Copy"
+    bl_label = "コピー"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Copy Bone Group"
 
@@ -195,7 +186,7 @@ class QANIM_OT_bone_pickup_copy(bpy.types.Operator):
 
 class QANIM_OT_bone_pickup_mirror(bpy.types.Operator):
     bl_idname = "qanim.bone_pickup_mirror"
-    bl_label = "LR Mirror"
+    bl_label = "LRミラー"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Mirror Bone Group"
 
@@ -206,7 +197,12 @@ class QANIM_OT_bone_pickup_mirror(bpy.types.Operator):
 
         new_group = context.scene.q_bp_bone_groups.add( )
         new_group.object = original.object
-        new_group.name = original.name + " Mirror"
+        if original.name[-2:] == "_R":
+            new_group.name = original.name[:-2] + "_L"
+        elif original.name[-2:] == "_L":
+            new_group.name = original.name[:-2] + "_R"
+        else:
+            new_group.name = original.name + " Mirror"
 
         for t in original.bones:
             bone = new_group.bones.add( )
@@ -221,7 +217,7 @@ class QANIM_OT_bone_pickup_mirror(bpy.types.Operator):
 
 class QANIM_OT_bone_pickup_delete(bpy.types.Operator):
     bl_idname = "qanim.bone_pickup_delete"
-    bl_label = "Delete"
+    bl_label = "削除"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Delete Bone Group"
 
@@ -233,9 +229,9 @@ class QANIM_OT_bone_pickup_delete(bpy.types.Operator):
 
 class QANIM_OT_bone_pickup_single_add(bpy.types.Operator):
     bl_idname = "qanim.bone_pickup_single_add"
-    bl_label = "Append"
+    bl_label = "追加"
     bl_options = {'REGISTER', 'UNDO'}
-    bl_description = "Append Bone to Group"
+    bl_description = "Register Bone Pickup"
 
     group_index: bpy.props.IntProperty( )
 
@@ -251,6 +247,7 @@ class QANIM_OT_bone_pickup_single_add(bpy.types.Operator):
 
     def execute(self, context):
         group = context.scene.q_bp_bone_groups[self.group_index]
+        group.high_light = False
         bones = context.selected_pose_bones_from_active_object if context.mode == "POSE" else context.selected_editable_bones
 
         for pb in bones:
@@ -269,20 +266,22 @@ class QANIM_OT_bone_pickup_single_add(bpy.types.Operator):
 
 class QANIM_OT_bone_pickup_single_delete(bpy.types.Operator):
     bl_idname = "qanim.bone_pickup_single_delete"
-    bl_label = "Remove"
+    bl_label = "削除"
     bl_options = {'REGISTER', 'UNDO'}
-    bl_description = "Remove Single Bone From Group"
+    bl_description = "Delete Single Bone From Group"
 
     group_index: bpy.props.IntProperty( )
     selected_item_index: bpy.props.IntProperty( )
 
     def execute(self, context):
-        context.scene.q_bp_bone_groups[self.group_index].bones.remove( self.selected_item_index )
+        group = context.scene.q_bp_bone_groups[self.group_index]
+        group.bones.remove( self.selected_item_index )
+        group.high_light = False
         return {'FINISHED'}
 
 class QANIM_OT_bone_pickup_save(bpy.types.Operator):
     bl_idname = "qanim.bone_pickup_save"
-    bl_label = "Save"
+    bl_label = "書出"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Save Bone Group to JSON"
 
@@ -291,6 +290,9 @@ class QANIM_OT_bone_pickup_save(bpy.types.Operator):
     def execute(self, context):
         data = []
         for group in context.scene.q_bp_bone_groups:
+            if not group.object or not group.object.q_bp_bone_group_export:
+                continue
+
             data.append({
                 "group_name": group.name
             ,   "object_name": group.object.name if group.object else ""
@@ -309,7 +311,7 @@ class QANIM_OT_bone_pickup_save(bpy.types.Operator):
 
 class QANIM_OT_bone_pickup_load(bpy.types.Operator):
     bl_idname = "qanim.bone_pickup_load"
-    bl_label = "Load"
+    bl_label = "読込"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Load Bone Group from JSON"
 
@@ -320,12 +322,17 @@ class QANIM_OT_bone_pickup_load(bpy.types.Operator):
         try:
             with open( self.json_path, 'r' ) as f:
                 all_data = json.load( f )
-            if "data" in all_data and "name" in all_data and "version" in all_data and all_data["name"] == BONE_PICKUP_HEADER:
-                data = all_data["data"]
-                version = all_data["version"]
+            if "data" in all_data and "name" in all_data and type( all_data["name"] ) is str:
+                if all_data["name"] == BONE_PICKUP_HEADER:
+                    data = all_data["data"]
+                    version = all_data["version"]
+                else:
+                    self.report({"ERROR"}, "このJSONはBone Pickup用ではありません。")
+                    raise Exception("error")
             else:
-                self.report({"ERROR"}, "このJSONはBone Pickup用ではありません。")
-                raise Exception("error")
+                # 旧バージョン(廃止予定)
+                data = all_data
+                version = 100
         except:
             return {'CANCELLED'}
 
@@ -369,7 +376,7 @@ class QANIM_OT_bone_pickup_load(bpy.types.Operator):
 
 class QANIM_OT_bone_pickup_load_from_blend(bpy.types.Operator):
     bl_idname = "qanim.bone_pickup_load_from_blend"
-    bl_label = "Load"
+    bl_label = "読込"
     bl_options = {'REGISTER', 'UNDO'}
     bl_description = "Load Bone Group from Blend file"
 
@@ -484,9 +491,9 @@ class QANIM_OT_bone_pickup_select_path_blend(bpy.types.Operator, ImportHelper):
 
 class QANIM_OT_bone_pickup_copy_all(bpy.types.Operator):
     bl_idname = "qanim.bone_pickup_copy_all"
-    bl_label = "Copy"
+    bl_label = "コピー"
     bl_options = {'REGISTER', 'UNDO'}
-    bl_description = "Copy All Bone Group from selected object"
+    bl_description = "Bone Group Copy All with Object"
 
     from_object_name: bpy.props.StringProperty( )
 
@@ -502,6 +509,22 @@ class QANIM_OT_bone_pickup_copy_all(bpy.types.Operator):
             for t in group.bones:
                 bone = new_group.bones.add( )
                 bone.bone_name = t.bone_name
+
+        return {'FINISHED'}
+
+class QANIM_OT_bone_pickup_all_select(bpy.types.Operator):
+    bl_idname = "qanim.bone_pickup_all_select"
+    bl_label = "全て選択"
+    bl_options = {'REGISTER', 'UNDO'}
+    bl_description = "All Select Bones in Bone Group"
+
+    group_index: bpy.props.IntProperty( )
+
+    def execute(self, context):
+        group = context.scene.q_bp_bone_groups[self.group_index]
+
+        for bone in group.bones:
+            bone.select = True
 
         return {'FINISHED'}
 
@@ -578,7 +601,7 @@ class QANIM_PT_bone_pickup(bpy.types.Panel):
                     col.alignment = 'LEFT'
                     col.label(text= "")
                     col = row.column( )
-                    col.prop( context.scene, "q_bp_bone_group_copy_all_to_object", text= "Copy To" )
+                    col.prop( context.scene, "q_bp_bone_group_copy_all_to_object", text= "コピー先" )
                     col = row.column( )
                     col.alignment = 'RIGHT'
                     col.operator( QANIM_OT_bone_pickup_copy_all.bl_idname ).from_object_name = obj_name
@@ -590,20 +613,23 @@ class QANIM_PT_bone_pickup(bpy.types.Panel):
                 row = inbox.row( )
                 col = row.column( )
                 col.alignment = 'LEFT'
-                col.prop(context.scene, "q_bp_bone_group_show_no_armature", text= "(*No Armature*)", icon="DISCLOSURE_TRI_DOWN" if context.scene.q_bp_bone_group_show_no_armature else "DISCLOSURE_TRI_RIGHT", emboss= False)
+                col.prop(context.scene, "q_bp_bone_group_show_no_armature", text= "どのアーマチュアにも紐付いていないグループ", icon="DISCLOSURE_TRI_DOWN" if context.scene.q_bp_bone_group_show_no_armature else "DISCLOSURE_TRI_RIGHT", emboss= False)
                 col = row.column( )
                 if not context.scene.q_bp_bone_group_show_no_armature:
                     continue
                 sorted_groups = [t for t in context.scene.q_bp_bone_groups if t.object is None]
+
+            # 検索
+            if context.scene.q_bp_bone_group_search_name != "":
+                for group in sorted_groups.copy():
+                    if context.scene.q_bp_bone_group_search_name.lower( ) not in group.name.lower( ):
+                        sorted_groups.remove( group )
 
             # グループ名でソート
             if context.scene.q_bp_bone_group_sort:
                 sorted_groups = sorted(sorted_groups, key= lambda x: x.name )
 
             for group in sorted_groups:
-                # 検索
-                if context.scene.q_bp_bone_group_search_name != "" and context.scene.q_bp_bone_group_search_name.lower( ) not in group.name.lower( ):
-                    continue
                 # グループID
                 group_index = 0
                 for t in context.scene.q_bp_bone_groups:
@@ -612,12 +638,13 @@ class QANIM_PT_bone_pickup(bpy.types.Panel):
                     group_index += 1
 
                 row = inbox.row( )
+                row.alert = group.high_light
                 indent( row )
                 col = row.column( )
                 col.alignment = 'LEFT'
                 col.prop(group, "show", icon_only= True, icon="DISCLOSURE_TRI_DOWN" if group.show else "DISCLOSURE_TRI_RIGHT", emboss= False)
                 col = row.column( )
-                col.prop(group, "name", text= "")
+                col.prop(group, "ui_name", text= "")
 
                 if group.show:
                     row = inbox.row( )
@@ -637,6 +664,10 @@ class QANIM_PT_bone_pickup(bpy.types.Panel):
                     op.group_index = group_index
                     col = row.column( )
                     col.alignment = 'LEFT'
+                    op = col.operator( QANIM_OT_bone_pickup_all_select.bl_idname )
+                    op.group_index = group_index
+                    col = row.column( )
+                    col.alignment = 'LEFT'
                     op = col.operator( QANIM_OT_bone_pickup_delete.bl_idname )
                     op.group_index = group_index
 
@@ -645,7 +676,7 @@ class QANIM_PT_bone_pickup(bpy.types.Panel):
                         indent( row )
                         indent( row )
                         col = row.column( )
-                        col.prop( group, "object", text= "Armature" )
+                        col.prop( group, "object", text= "アーマチュア" )
 
                     index = 0
                     sorted_bones = [t for t in group.bones]
@@ -679,7 +710,7 @@ class QANIM_PT_bone_pickup(bpy.types.Panel):
 
         if context.scene.q_bp_bone_group_import_export == "IMPORT":
             col = row.column( )
-            col.prop(context.scene, "q_bp_bone_group_import_json_path", text="Import from")
+            col.prop(context.scene, "q_bp_bone_group_import_json_path", text="インポート元")
             col = row.column( )
             col.alignment = "RIGHT"
             col.operator(QANIM_OT_bone_pickup_select_path_import_json.bl_idname, text="", icon="FILE_FOLDER")
@@ -688,16 +719,28 @@ class QANIM_PT_bone_pickup(bpy.types.Panel):
             col.operator( QANIM_OT_bone_pickup_load.bl_idname ).json_path = context.scene.q_bp_bone_group_import_json_path
         elif context.scene.q_bp_bone_group_import_export == "EXPORT":
             col = row.column( )
-            col.prop(context.scene, "q_bp_bone_group_export_json_path", text="Export to")
+            col.prop(context.scene, "q_bp_bone_group_export_json_path", text="エクスポート先")
             col = row.column( )
             col.alignment = "RIGHT"
             col.operator(QANIM_OT_bone_pickup_select_path_export_json.bl_idname, text="", icon="FILE_FOLDER")
             col = row.column( )
             col.alignment = "RIGHT"
             col.operator( QANIM_OT_bone_pickup_save.bl_idname ).json_path = context.scene.q_bp_bone_group_export_json_path
+            row = layout.row( )
+            box = row.box( )
+            box.label( text= "出力対象アーマチュア:" )
+            founded = {}
+            for g in context.scene.q_bp_bone_groups:
+                if not g.object:
+                    continue
+                if g.object.name in founded:
+                    continue
+                founded[g.object.name] = True
+                col = box.column( )
+                col.prop(g.object, "q_bp_bone_group_export", text= g.object.name)
         elif context.scene.q_bp_bone_group_import_export == "BLEND":
             col = row.column( )
-            col.prop(context.scene, "q_bp_bone_group_input_blend_path", text="Import from Blend file")
+            col.prop(context.scene, "q_bp_bone_group_input_blend_path", text="Blendから読み込み")
             col = row.column( )
             col.alignment = "RIGHT"
             col.operator(QANIM_OT_bone_pickup_select_path_blend.bl_idname, text="", icon="FILE_FOLDER")
@@ -730,6 +773,7 @@ classes = (
     QANIM_OT_bone_pickup_select_path_export_json,
     QANIM_OT_bone_pickup_select_path_blend,
     QANIM_OT_bone_pickup_copy_all,
+    QANIM_OT_bone_pickup_all_select,
 )
 
 def register():
@@ -763,10 +807,16 @@ def _initialize( ):
         options= {'HIDDEN'},
         override= {'LIBRARY_OVERRIDABLE'},
     )
+    bpy.types.Object.q_bp_bone_group_export = bpy.props.BoolProperty(
+        default= True,
+        options= {'HIDDEN'},
+        override= {'LIBRARY_OVERRIDABLE'},
+    )
 
     bpy.types.Scene.q_bp_bone_groups = bpy.props.CollectionProperty(
         name="Hyper Bone Selection Sets Group",
-        type= QANIM_SAVE_bone_pickup_group
+        type= QANIM_SAVE_bone_pickup_group,
+        options={'HIDDEN'}
     )
     bpy.types.Scene.q_bp_bone_group_copy_all_to_object = bpy.props.PointerProperty( type= bpy.types.Object, poll= _filter_armature_object, options={'HIDDEN'} )
     bpy.types.Scene.q_bp_bone_group_search_name = bpy.props.StringProperty( options={'HIDDEN'} )
@@ -787,12 +837,12 @@ def _initialize( ):
         )
     )
     bpy.types.Scene.q_bp_bone_group_mode = bpy.props.EnumProperty(
-        name= "Check Mode"
+        name= "モード"
     ,   default= 'DEFAULT' if windows_mode else 'BLENDER_CHECK'
     ,   options={'HIDDEN'}
     ,   items=(
-            ('DEFAULT', 'Default', '通常の選択と同じ挙動'),
-            ('BLENDER_CHECK', 'Blender Check', 'Blenderのチェックマークと同じ挙動'),
+            ('DEFAULT', 'デフォルト', '通常の選択と同じ挙動'),
+            ('BLENDER_CHECK', 'Blenderチェック式', 'Blenderのチェックマークと同じ挙動'),
         )
     )
 
